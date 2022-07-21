@@ -31,20 +31,37 @@ FaceProcessor::FaceProcessor(int max_batch_size, int input_width, int input_heig
 
 FaceProcessor::~FaceProcessor()
 {
+    // Deallocate
+    std::cout << "Deallocate Stream & CUDA memory" << std::endl;
+    cudaStreamDestroy(stream);
+    CHECK(cudaFree(buffers[input_index]));
+    CHECK(cudaFree(buffers[output_index]));
 }
 
 void FaceProcessor::init()
 {
     mRuntime = std::shared_ptr<nvinfer1::IRuntime>(nvinfer1::createInferRuntime(gLogger));
     assert(mRuntime != nullptr);
-
     std::cout << "Deserialize Engine" << std::endl;
     deserializeEngine();
-
     mContext = std::shared_ptr<nvinfer1::IExecutionContext>(mCudaEngine->createExecutionContext());
     assert(mContext != nullptr);
-
     mContext->setOptimizationProfile(0);
+
+    // Create Stream
+    CHECK(cudaStreamCreate(&stream));
+    // Get engine
+    const nvinfer1::ICudaEngine& engine = mContext->getEngine();
+    // Get index of input & output in engine
+    input_index  = engine.getBindingIndex(INPUT_BLOB_NAME);
+    output_index = engine.getBindingIndex(OUTPUT_BLOB_NAME);
+    assert(input_index >= 0); 
+    assert(output_index >= 0); 
+    // Allocate Input & Output in DEVICE memory
+    int size_of_input  = max_batch_size_ * input_width_ * input_height_ * 3 * sizeof(float);
+    int size_of_output = max_batch_size_ * features_size_ * sizeof(float);
+    CHECK(cudaMalloc(&buffers[input_index], size_of_input));
+    CHECK(cudaMalloc(&buffers[output_index], size_of_output));
 
     std::cout << "Finished init" << std::endl;
 }
@@ -69,29 +86,12 @@ void FaceProcessor::deserializeEngine(){
 }
 
 void FaceProcessor::inferenceOnce(nvinfer1::IExecutionContext& context, float* input, float* output, int batch_size){
-    // Get engine
-    const nvinfer1::ICudaEngine& engine = context.getEngine();
-
-    // Get index of input & output in engine
-    const int input_index  = engine.getBindingIndex(INPUT_BLOB_NAME);
-    const int output_index = engine.getBindingIndex(OUTPUT_BLOB_NAME);
+    // Calculate size
+    int size_of_input  = batch_size * input_width_ * input_height_ * 3 * sizeof(float);
+    int size_of_output = batch_size * features_size_ * sizeof(float);
 
     // Set context binding dimension
     context.setBindingDimensions(input_index, nvinfer1::Dims4(batch_size, 3, input_height_, input_width_));
-
-    nvinfer1::Dims tmp = context.getBindingDimensions(input_index);
-    // Pointers to input and output DEVICE memories/buffers
-    void* buffers[2]; // just 1 input & 1 output
-
-    // Allocate Input & Output in DEVICE memory
-    int size_of_input  = batch_size * input_width_ * input_height_ * 3 * sizeof(float);
-    int size_of_output = batch_size * features_size_ * sizeof(float);
-    CHECK(cudaMalloc(&buffers[input_index], size_of_input));
-    CHECK(cudaMalloc(&buffers[output_index], size_of_output));
-
-    // Create Stream
-    cudaStream_t stream;
-    CHECK(cudaStreamCreate(&stream));
 
     // Copy Memory from Host to Device (Async)
     CHECK(cudaMemcpyAsync(buffers[input_index], input, size_of_input, cudaMemcpyHostToDevice, stream));
@@ -108,11 +108,6 @@ void FaceProcessor::inferenceOnce(nvinfer1::IExecutionContext& context, float* i
     
     // Wait for all concurrent executions in stream to be completed
     cudaStreamSynchronize(stream);
-
-    // Deallocate
-    cudaStreamDestroy(stream);
-    CHECK(cudaFree(buffers[input_index]));
-    CHECK(cudaFree(buffers[output_index]));
 }
 
 void FaceProcessor::get_features(const std::vector<cv::Mat>& lst_face_align, std::vector <float*>& lst_features){
@@ -170,7 +165,7 @@ int main(){
 
     // Init model & Load weights
     std::cout << "Init model" << std::endl;
-    FaceProcessor face_embedding(1, 112, 112, 512);
+    FaceProcessor face_embedding(4, 112, 112, 512);
     face_embedding.init();
     
     // Inference

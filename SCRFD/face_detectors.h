@@ -39,10 +39,23 @@ private:
 	std::shared_ptr<nvinfer1::IRuntime> mRuntime;
 	std::shared_ptr<nvinfer1::ICudaEngine> mCudaEngine;
 	std::shared_ptr<nvinfer1::IExecutionContext> mContext;
+    // Pointers to input and output DEVICE memories/buffers
+    void* buffers[6]; // 1 input & 5 outputs
 	int max_batch_size_ = 4;
     int input_width_    = 112;
     int input_height_   = 112;
     int keep_top_k_     = 200;
+    int index_input_    = 200;
+
+    int index_input           = -1;
+    int index_num_detections  = -1;
+    int index_nmsed_boxes     = -1;
+    int index_nmsed_scores    = -1;
+    int index_nmsed_classes   = -1;
+    int index_nmsed_landmarks = -1;
+
+    cudaStream_t stream;
+
     const char* INPUT_BLOB_NAME = "input.1";
     const char* OUTPUT_BLOB_NAME_NUM_DETECTIONS = "num_detections";
     const char* OUTPUT_BLOB_NAME_BOXES = "nmsed_boxes";

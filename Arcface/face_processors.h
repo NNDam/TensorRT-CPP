@@ -25,6 +25,13 @@ private:
     int input_width_ = 112;
     int input_height_ = 112;
     int features_size_ = 512;
+	int input_index = -1;
+	int output_index = -1;
     const char* INPUT_BLOB_NAME = "input";
     const char* OUTPUT_BLOB_NAME = "output";
+
+	// Pointers to input and output DEVICE memories/buffers
+    void* buffers[2]; // just 1 input & 1 output
+	cudaStream_t stream;
+
 };

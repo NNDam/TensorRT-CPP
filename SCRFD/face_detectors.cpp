@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <stdexcept>
+#include <assert.h>
 #include <memory>
 #include <opencv2/opencv.hpp>
 #include "cuda_runtime_api.h" //Allocate, deallocate CUDA memory
@@ -33,6 +34,15 @@ FaceDetectorSCRFD::FaceDetectorSCRFD(int max_batch_size, int input_width, int in
 
 FaceDetectorSCRFD::~FaceDetectorSCRFD()
 {
+    std::cout << "Deallocate Stream & CUDA memory" << std::endl;
+    cudaStreamDestroy(stream);
+    CHECK(cudaFree(buffers[index_input]));
+    CHECK(cudaFree(buffers[index_num_detections]));
+    CHECK(cudaFree(buffers[index_nmsed_boxes]));
+    CHECK(cudaFree(buffers[index_nmsed_scores]));
+    CHECK(cudaFree(buffers[index_nmsed_classes]));
+    CHECK(cudaFree(buffers[index_nmsed_landmarks]));
+    
 }
 
 void FaceDetectorSCRFD::init()
@@ -42,12 +52,41 @@ void FaceDetectorSCRFD::init()
 
     std::cout << "Deserialize Engine" << std::endl;
     deserializeEngine();
-
     mContext = std::shared_ptr<nvinfer1::IExecutionContext>(mCudaEngine->createExecutionContext());
     assert(mContext != nullptr);
-
     mContext->setOptimizationProfile(0);
 
+    // Create Stream
+    std::cout << "Create Stream" << std::endl;
+    CHECK(cudaStreamCreate(&stream));
+
+    std::cout << "Allocate CUDA once time for reusing" << std::endl;
+    // Allocate Input & Output in DEVICE memory
+    const nvinfer1::ICudaEngine& engine = mContext->getEngine();
+    index_input           = engine.getBindingIndex(INPUT_BLOB_NAME);
+    index_num_detections  = engine.getBindingIndex(OUTPUT_BLOB_NAME_NUM_DETECTIONS);
+    index_nmsed_boxes     = engine.getBindingIndex(OUTPUT_BLOB_NAME_BOXES);
+    index_nmsed_scores    = engine.getBindingIndex(OUTPUT_BLOB_NAME_SCORES);
+    index_nmsed_classes   = engine.getBindingIndex(OUTPUT_BLOB_NAME_CLASSES);
+    index_nmsed_landmarks = engine.getBindingIndex(OUTPUT_BLOB_NAME_LANDMARKS);
+    assert (index_input >= 0);
+    assert (index_nmsed_landmarks >= 0);
+    assert (index_nmsed_classes >= 0);
+    assert (index_num_detections >= 0);
+    assert (index_nmsed_boxes >= 0);
+    assert (index_nmsed_scores >= 0);
+    int size_of_input           = max_batch_size_ * input_width_ * input_height_ * 3 * sizeof(float);
+    int size_of_num_detections  = max_batch_size_ * sizeof(int);
+    int size_of_nmsed_boxes     = max_batch_size_ * keep_top_k_ * 4 * sizeof(float);
+    int size_of_nmsed_scores    = max_batch_size_ * keep_top_k_ * sizeof(float);
+    int size_of_nmsed_classes   = max_batch_size_ * keep_top_k_ * sizeof(float);
+    int size_of_nmsed_landmarks = max_batch_size_ * keep_top_k_ * 10 * sizeof(float);
+    CHECK(cudaMalloc(&buffers[index_input], size_of_input));
+    CHECK(cudaMalloc(&buffers[index_num_detections], size_of_num_detections));
+    CHECK(cudaMalloc(&buffers[index_nmsed_boxes], size_of_nmsed_boxes));
+    CHECK(cudaMalloc(&buffers[index_nmsed_scores], size_of_nmsed_scores));
+    CHECK(cudaMalloc(&buffers[index_nmsed_classes], size_of_nmsed_classes));
+    CHECK(cudaMalloc(&buffers[index_nmsed_landmarks], size_of_nmsed_landmarks));
     std::cout << "Finished init" << std::endl;
 }
 
@@ -78,42 +117,17 @@ void FaceDetectorSCRFD::inferenceOnce(nvinfer1::IExecutionContext& context,
                                     float* nmsed_classes,
                                     float* nmsed_landmarks,
                                     int batch_size){
-    // Get engine
-    const nvinfer1::ICudaEngine& engine = context.getEngine();
-
-    // Get index of input & output in engine
-    const int index_input           = engine.getBindingIndex(INPUT_BLOB_NAME);
-    const int index_num_detections  = engine.getBindingIndex(OUTPUT_BLOB_NAME_NUM_DETECTIONS);
-    const int index_nmsed_boxes     = engine.getBindingIndex(OUTPUT_BLOB_NAME_BOXES);
-    const int index_nmsed_scores    = engine.getBindingIndex(OUTPUT_BLOB_NAME_SCORES);
-    const int index_nmsed_classes   = engine.getBindingIndex(OUTPUT_BLOB_NAME_CLASSES);
-    const int index_nmsed_landmarks = engine.getBindingIndex(OUTPUT_BLOB_NAME_LANDMARKS);
 
     // Set context binding dimension
     context.setBindingDimensions(index_input, nvinfer1::Dims4(batch_size, 3, input_height_, input_width_));
 
-    // Pointers to input and output DEVICE memories/buffers
-    void* buffers[6]; // 1 input & 5 outputs
-
-    // Allocate Input & Output in DEVICE memory
+    // Copy Memory from Host to Device (Async)
     int size_of_input           = batch_size * input_width_ * input_height_ * 3 * sizeof(float);
     int size_of_num_detections  = batch_size * sizeof(int);
     int size_of_nmsed_boxes     = batch_size * keep_top_k_ * 4 * sizeof(float);
     int size_of_nmsed_scores    = batch_size * keep_top_k_ * sizeof(float);
     int size_of_nmsed_classes   = batch_size * keep_top_k_ * sizeof(float);
     int size_of_nmsed_landmarks = batch_size * keep_top_k_ * 10 * sizeof(float);
-    CHECK(cudaMalloc(&buffers[index_input], size_of_input));
-    CHECK(cudaMalloc(&buffers[index_num_detections], size_of_num_detections));
-    CHECK(cudaMalloc(&buffers[index_nmsed_boxes], size_of_nmsed_boxes));
-    CHECK(cudaMalloc(&buffers[index_nmsed_scores], size_of_nmsed_scores));
-    CHECK(cudaMalloc(&buffers[index_nmsed_classes], size_of_nmsed_classes));
-    CHECK(cudaMalloc(&buffers[index_nmsed_landmarks], size_of_nmsed_landmarks));
-
-    // Create Stream
-    cudaStream_t stream;
-    CHECK(cudaStreamCreate(&stream));
-
-    // Copy Memory from Host to Device (Async)
     CHECK(cudaMemcpyAsync(buffers[index_input], input, size_of_input, cudaMemcpyHostToDevice, stream));
 
     // Inference (Async)
@@ -132,15 +146,7 @@ void FaceDetectorSCRFD::inferenceOnce(nvinfer1::IExecutionContext& context,
     
     // Wait for all concurrent executions in stream to be completed
     cudaStreamSynchronize(stream);
-
-    // Deallocate
-    cudaStreamDestroy(stream);
-    CHECK(cudaFree(buffers[index_input]));
-    CHECK(cudaFree(buffers[index_num_detections]));
-    CHECK(cudaFree(buffers[index_nmsed_boxes]));
-    CHECK(cudaFree(buffers[index_nmsed_scores]));
-    CHECK(cudaFree(buffers[index_nmsed_classes]));
-    CHECK(cudaFree(buffers[index_nmsed_landmarks]));
+      
 }
 
 
@@ -236,7 +242,6 @@ void FaceDetectorSCRFD::detect(const std::vector<cv::Mat>& lst_rgb_image,
             std::vector<float*> points {};
             
             int nbox = tmp_num_detections[j];
-            std::cout << "Detected " << tmp_num_detections[j] << std::endl;
 
             for (int k = 0; k < nbox; ++k){
                 if (tmp_nmsed_scores[j*keep_top_k_ + k] > threshold){
@@ -271,6 +276,7 @@ void FaceDetectorSCRFD::detect(const std::vector<cv::Mat>& lst_rgb_image,
     delete[] tmp_nmsed_landmarks;
   
 }
+
 
 int main(){
     cudaSetDevice(0);
