@@ -14,7 +14,7 @@ public:
 	void deserializeEngine();
 	void init();
 	void inferenceOnce(nvinfer1::IExecutionContext& context, float* input, float* output, int batch_size);
-	std::vector<float*> get_features(const std::vector<cv::Mat>& lst_face_align);
+	void get_features(const std::vector<cv::Mat>& lst_face_align, std::vector <float*>& lst_features);
 
 private:
     Logger gLogger;

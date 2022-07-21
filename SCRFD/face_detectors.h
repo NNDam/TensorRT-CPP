@@ -28,6 +28,10 @@ public:
     void visualize_all(cv::Mat& visualize_image,
                     std::vector<float*>& bboxes,
                     std::vector<float*>& points);
+    void get_face_align(const cv::Mat& rgb_image,
+                        const std::vector<float*>& bboxes,
+                        const std::vector<float*>& points,
+                        std::vector<cv::Mat>& lst_face_align);
 
 
 private:

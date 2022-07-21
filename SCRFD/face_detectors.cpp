@@ -6,6 +6,7 @@
 #include "cuda_runtime_api.h" //Allocate, deallocate CUDA memory
 #include "NvInfer.h"
 #include "face_detectors.h"
+#include "face_align.h"
 #include "utils.h"
 #include "logging.h"
 
@@ -157,6 +158,41 @@ void FaceDetectorSCRFD::visualize_all(cv::Mat& visualize_image,
         }
     }
 }
+
+void FaceDetectorSCRFD::get_face_align(const cv::Mat& rgb_image,
+                            const std::vector<float*>& bboxes,
+                            const std::vector<float*>& points,
+                            std::vector<cv::Mat>& lst_face_align){
+    int total_face = bboxes.size();
+    cv::Size face_size(112, 112);
+    float points_dst[5][2] = {
+		{ 30.2946f + 8.0f, 51.6963f },
+		{ 65.5318f + 8.0f, 51.5014f },
+		{ 48.0252f + 8.0f, 71.7366f },
+		{ 33.5493f + 8.0f, 92.3655f },
+		{ 62.7299f + 8.0f, 92.2041f }
+	};
+
+    for (int i = 0; i < total_face; ++i){
+        cv::Mat aligned_face;
+        aligned_face.create(face_size, CV_32FC3);
+        float points_src[5][2] = {
+            {points[i][0], points[i][1]},
+            {points[i][2], points[i][3]},
+            {points[i][4], points[i][5]},
+            {points[i][6], points[i][7]},
+            {points[i][8], points[i][9]}
+	    };
+        cv::Mat src_mat(5, 2, CV_32FC1, points_src);
+	    cv::Mat dst_mat(5, 2, CV_32FC1, points_dst);
+        cv::Mat transform    = FacePreprocess::SimilarTransform(src_mat, dst_mat);
+        cv::Mat transfer_mat = transform(cv::Rect(0, 0, 3, 2));
+        cv::warpAffine(rgb_image, aligned_face, transfer_mat, face_size, 1, 0, 0);
+        lst_face_align.push_back(aligned_face);
+    }
+}
+
+
 void FaceDetectorSCRFD::detect(const std::vector<cv::Mat>& lst_rgb_image,
                             const float& threshold,
                             std::vector<std::vector<float*>>& lst_bboxes,
@@ -253,11 +289,6 @@ int main(){
     lst_rgb_image.push_back(img2);
     lst_rgb_image.push_back(img3);
     lst_rgb_image.push_back(img4);
-    // cv::Mat img2 = cv::imread("../test_images/crop.jpg");
-    // cv::resize(img2, img2, cv::Size(112, 112));
-    // cv::cvtColor(img2, img2, cv::COLOR_BGR2RGB);
-    // // std::cout << "img2 = " << std::endl << " "  << img2 << std::endl << std::endl;
-    // lst_face_align.push_back(img2);
 
     // Init model & Load weights
     std::cout << "Init model" << std::endl;
@@ -276,14 +307,19 @@ int main(){
     face_detect.detect(lst_rgb_image, threshold, lst_bboxes, lst_points);
     auto end = std::chrono::system_clock::now();
     std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-    std::cout << lst_bboxes[0].size() << std::endl;
-
     
     std::cout << "Visualize" << std::endl;
     for (int i = 0; i < 4; ++i){
-        cv::Mat visualize_image = lst_rgb_image[i];
+        cv::Mat visualize_image = lst_rgb_image[i].clone();
         cv::cvtColor(visualize_image, visualize_image, cv::COLOR_RGB2BGR);
         face_detect.visualize_all(visualize_image, lst_bboxes[i], lst_points[i]);
         cv::imwrite("test_" + std::to_string(i) + ".jpg", visualize_image);
+    }
+    std::vector<cv::Mat> lst_face_align;
+    face_detect.get_face_align(lst_rgb_image[0], lst_bboxes[0], lst_points[0], lst_face_align);
+    for (int i = 0; i < lst_face_align.size(); ++i){
+        cv::Mat face_image = lst_face_align[i].clone();
+        cv::cvtColor(face_image, face_image, cv::COLOR_RGB2BGR);
+        cv::imwrite("face_" + std::to_string(i) + ".jpg", face_image);
     }
 }

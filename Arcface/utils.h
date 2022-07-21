@@ -1,7 +1,7 @@
 #pragma once
 #include <opencv2/opencv.hpp>
 
-float* get_images_slicing(std::vector<cv::Mat> lst_face_align, int lower, int upper, int input_width, int input_height)
+float* get_images_slicing(const std::vector<cv::Mat>& lst_face_align, int lower, int upper, int input_width, int input_height)
 {
 
     float* image_data;
@@ -13,8 +13,8 @@ float* get_images_slicing(std::vector<cv::Mat> lst_face_align, int lower, int up
         cv::Mat img = lst_face_align[lower + i];
         for (int j = 0; j < input_width * input_height; j++) {
             // Transpose image
-            data[i*each_image_size + j] = ((float)img.at<cv::Vec3b>(j)[0]/255.0 - 0.5)/0.5;
-            data[i*each_image_size + j + input_width * input_height] = ((float)img.at<cv::Vec3b>(j)[1]/255.0 - 0.5)/0.5;
+            data[i*each_image_size + j]                                  = ((float)img.at<cv::Vec3b>(j)[0]/255.0 - 0.5)/0.5;
+            data[i*each_image_size + j + input_width * input_height]     = ((float)img.at<cv::Vec3b>(j)[1]/255.0 - 0.5)/0.5;
             data[i*each_image_size + j + 2 * input_width * input_height] = ((float)img.at<cv::Vec3b>(j)[2]/255.0 - 0.5)/0.5;
         }
     }
