@@ -1,4 +1,4 @@
-# batchedNMSPlugin
+# batchedNMSCustomPlugin
 
 **Table Of Contents**
 - [Description](#description)
@@ -46,12 +46,14 @@ A `[batch_size, keepTopK]` float32 tensor containing the scores for the boxes.
 - `nmsed_classes`
 A `[batch_size, keepTopK]` float32 tensor containing the classes for the boxes.
 
+- `nmsed_landmarks`
+A `[batch_size, keepTopK, 10]` float32 tensor containing the 5 landmarks for the boxes.
 
 ## Parameters
 
-The `batchedNMSPlugin` has plugin creator class `BatchedNMSPluginCreator` and plugin class `BatchedNMSPlugin`.
+The `batchedCustomNMSPlugin` has plugin creator class `BatchedNMSPluginCreator` and plugin class `BatchedNMSPlugin`.
 
-The `batchedNMSPlugin` is created using `BatchedNMSPluginCreator` with `NMSParameters` typed parameters. The `NMSParameters` data structure is listed as follows and is defined in the [NvInferPlugin.h header file](https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/c_api/_nv_infer_plugin_8h_source.html).
+The `batchedCustomNMSPlugin` is created using `BatchedNMSPluginCreator` with `NMSParameters` typed parameters. The `NMSParameters` data structure is listed as follows and is defined in the [NvInferPlugin.h header file](https://docs.nvidia.com/deeplearning/sdk/tensorrt-api/c_api/_nv_infer_plugin_8h_source.html).
 
 | Type     | Parameter                | Description
 |----------|--------------------------|--------------------------------------------------------
