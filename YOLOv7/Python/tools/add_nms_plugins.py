@@ -89,7 +89,7 @@ if __name__ == '__main__':
     # Export the model
     torch.onnx.export(model,               # model being run
                       (sample_output,),                         # model input (or a tuple for multiple inputs)
-                      "yolov7x_post_process.onnx",   # where to save the model (can be a file or file-like object)
+                      "yolo_post_process.onnx",   # where to save the model (can be a file or file-like object)
                       export_params=True,        # store the trained parameter weights inside the model file
                       opset_version=11,          # the ONNX version to export the model to
                       do_constant_folding=True,  # whether to execute constant folding for optimization
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     import onnx_graphsurgeon as gs
     model1 = onnx.load(args.model)
 
-    model2 = onnx.load('yolov7x_post_process.onnx')
+    model2 = onnx.load('yolo_post_process.onnx')
 
     combined_model = onnx.compose.merge_models(
         model1, model2,
@@ -112,4 +112,4 @@ if __name__ == '__main__':
     graph = gs.import_onnx(combined_model)
     graph = create_and_add_plugin_node(graph, args.topK, args.keepTopK)
     graph.cleanup(remove_unused_node_outputs=True).toposort()
-    onnx.save(gs.export_onnx(graph), "yolov7x-nms.onnx")
+    onnx.save(gs.export_onnx(graph), args.model.replace(".onnx", "-nms.onnx"))
