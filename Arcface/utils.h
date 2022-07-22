@@ -25,7 +25,7 @@ float* get_images_slicing(const std::vector<cv::Mat>& lst_face_align, int lower,
 
 
 
-void normalize_vector(float* arr, int features_size, float* norm_features){
+void normalize_vector(std::shared_ptr<float[]> arr, int features_size, std::shared_ptr<float[]> norm_features){
     float sum_square = 0;
     for (int i = 0; i < features_size; i++){
         sum_square += arr[i]*arr[i];

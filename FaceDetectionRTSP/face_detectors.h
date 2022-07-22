@@ -42,8 +42,8 @@ private:
     // Pointers to input and output DEVICE memories/buffers
     void* buffers[6]; // 1 input & 5 outputs
 	int max_batch_size_ = 4;
-    int input_width_    = 112;
-    int input_height_   = 112;
+    int input_width_    = 640;
+    int input_height_   = 640;
     int keep_top_k_     = 200;
     int index_input_    = 200;
 

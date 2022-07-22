@@ -110,7 +110,7 @@ void FaceProcessor::inferenceOnce(nvinfer1::IExecutionContext& context, float* i
     cudaStreamSynchronize(stream);
 }
 
-void FaceProcessor::get_features(const std::vector<cv::Mat>& lst_face_align, std::vector <float*>& lst_features){
+void FaceProcessor::get_features(const std::vector<cv::Mat>& lst_face_align, std::vector<std::shared_ptr<float[]>>& lst_features){
     // Get number of batch
     int total_image = lst_face_align.size();
     int total_minibatch = total_image % max_batch_size_ == 0 ? (int)(total_image / max_batch_size_) : (int)(total_image / max_batch_size_) + 1;
@@ -118,7 +118,7 @@ void FaceProcessor::get_features(const std::vector<cv::Mat>& lst_face_align, std
     int upper;
     int batch_size;
     float* tmp_output    = new float[max_batch_size_ * features_size_]; // Must allocate memory
-    float* tmp_features  = new float[features_size_]; // Allocate once
+    std::shared_ptr<float[]> tmp_features (new float[features_size_]); // Allocate once
     float* tmp_input;
     // Infer each minibatch
     for (int i = 0; i < total_minibatch; i++){
@@ -136,7 +136,7 @@ void FaceProcessor::get_features(const std::vector<cv::Mat>& lst_face_align, std
             for (int k = 0; k < features_size_; k++){
                 tmp_features[k] = tmp_output[j*features_size_ + k];
             }
-            float* norm_features = new float[features_size_]; // Allocate once
+            std::shared_ptr<float[]> norm_features (new float[features_size_]); // Allocate once
             normalize_vector(tmp_features, features_size_, norm_features);
             
             lst_features.push_back(norm_features);
@@ -144,7 +144,6 @@ void FaceProcessor::get_features(const std::vector<cv::Mat>& lst_face_align, std
     }
     delete[] tmp_input;
     delete[] tmp_output;
-    delete[] tmp_features;
 }
 
 int main(){
@@ -171,12 +170,12 @@ int main(){
     // Inference
     std::cout << "Infer" << std::endl;
     auto start = std::chrono::system_clock::now();
-    std::vector <float*> lst_features;
+    std::vector <std::shared_ptr<float[]>> lst_features;
     face_embedding.get_features(lst_face_align, lst_features);
     auto end = std::chrono::system_clock::now();
     std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 
-    for(float* feature: lst_features){
+    for(std::shared_ptr<float[]> feature: lst_features){
         for (int j = 0; j < 10; j++){
             std::cout << feature[j] << " ";
         }
