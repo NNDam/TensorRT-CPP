@@ -1,9 +1,21 @@
 # Python & C++ wrapper for End-to-End YOLOv7
 - Original repo: https://github.com/WongKinYiu/yolov7
 - NMS Plugin: https://github.com/NVIDIA/TensorRT/tree/main/plugin/batchedNMSPlugin
+## 1. Tested Performance
+Tested performance with ```NVIDIA A100-PCIE-40GB - 1x3x640x640```
+|    Model   |   FP32  |   FP16  |
+|:----------:|:-------:|:-------:|
+|   YOLOv7   |   6.14 ms  |   3.79 ms  |
+|   YOLOv7X  |   7.96 ms  |   4.51 ms  |
+|  YOLOv7-W6 |   6.30 ms  |   4.28 ms  |
 
-## 1. TensorRT Python
+## 2. TensorRT Python
+### Test Environment
+- torch 1.11.0
+- onnx 1.12.0
+
 ### Convert to ONNX
+- All original MSCOCO converted ONNX models: [Link](https://drive.google.com/drive/folders/15hUBefQv28FJ-yfw_Wpvlbu23WeY5E2S?usp=sharing)
 - Clone and put ```tools/export.py``` and ```tools/add_nms_plugins.py``` to [original yolov7 repo](https://github.com/WongKinYiu/yolov7)
 - Run ```python export.py --weights yolov7x.pt --dynamic  --simplify``` to get ```yolov7x.onnx```
 - Run ```python add_nms_plugins.py --model yolov7x.onnx``` to add NMS Plugin and get ```yolov7x-nms.onnx```
@@ -24,6 +36,7 @@ Convert ONNX to TensortRT with dynamic input shape in range ```1x3x640x640```-``
                               --fp16
 ```
 #### Run Sample Demo
+Change path to serialized engine file and run 
 ```
   python object_detector_trt_nms.py
 ```
@@ -32,8 +45,9 @@ Convert ONNX to TensortRT with dynamic input shape in range ```1x3x640x640```-``
   <i> Output of <b>YOLOv7X-1x3x640x640 thresh 0.5</b>. For better result, just resize input larger</i>
 </p>
 
-## 2. TensorRT C++
+## 3. TensorRT C++
 ### Sample Application for Video/RTSP input
+Put sample ```yolov7x-nms-fp16.trt``` from above Python conversion and rename to ```C++/weights/model.engine```
 ```
   cd C++
   mkdir build && cd build
