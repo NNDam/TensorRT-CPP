@@ -34,8 +34,8 @@ int main(int argc, char** argv){
         cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
 
         
-        std::vector<std::vector<float*>> lst_bboxes {};
-        std::vector<std::vector<float*>> lst_points {};
+        std::vector<std::vector<std::shared_ptr<float[]>>> lst_bboxes {};
+        std::vector<std::vector<std::shared_ptr<float[]>>> lst_points {};
         std::vector<cv::Mat> lst_rgb_image {};
 
         

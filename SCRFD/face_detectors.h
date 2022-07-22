@@ -23,14 +23,14 @@ public:
                         int batch_size);
 	void detect(const std::vector<cv::Mat>& lst_rgb_image,
                             const float& threshold,
-                            std::vector<std::vector<float*>>& lst_bboxes,
-                            std::vector<std::vector<float*>>& lst_points);
+                            std::vector<std::vector<std::shared_ptr<float[]>>>& lst_bboxes,
+                            std::vector<std::vector<std::shared_ptr<float[]>>>& lst_points);
     void visualize_all(cv::Mat& visualize_image,
-                    std::vector<float*>& bboxes,
-                    std::vector<float*>& points);
+                    std::vector<std::shared_ptr<float[]>>& bboxes,
+                    std::vector<std::shared_ptr<float[]>>& points);
     void get_face_align(const cv::Mat& rgb_image,
-                        const std::vector<float*>& bboxes,
-                        const std::vector<float*>& points,
+                        const std::vector<std::shared_ptr<float[]>>& bboxes,
+                        const std::vector<std::shared_ptr<float[]>>& points,
                         std::vector<cv::Mat>& lst_face_align);
 
 

@@ -151,14 +151,14 @@ void FaceDetectorSCRFD::inferenceOnce(nvinfer1::IExecutionContext& context,
 
 
 void FaceDetectorSCRFD::visualize_all(cv::Mat& visualize_image,
-                                std::vector<float*>& bboxes,
-                                std::vector<float*>& points){
-    for (float* box: bboxes){
+                                std::vector<std::shared_ptr<float[]>>& bboxes,
+                                std::vector<std::shared_ptr<float[]>>& points){
+    for (std::shared_ptr<float[]> box: bboxes){
         cv::Point pt1((int)box[0], (int)box[1]);
         cv::Point pt2((int)box[2], (int)box[3]);
         cv::rectangle(visualize_image, pt1, pt2, cv::Scalar(0, 255, 0));
     }
-    for (float* point: points){
+    for (std::shared_ptr<float[]> point: points){
         for (int i = 0; i < 5; i++){
             cv::circle(visualize_image, cv::Point((int)point[i*2], (int)point[i*2+1]), 2, cv::Scalar(0,0,255), cv::FILLED, 2,0);
         }
@@ -166,8 +166,8 @@ void FaceDetectorSCRFD::visualize_all(cv::Mat& visualize_image,
 }
 
 void FaceDetectorSCRFD::get_face_align(const cv::Mat& rgb_image,
-                            const std::vector<float*>& bboxes,
-                            const std::vector<float*>& points,
+                            const std::vector<std::shared_ptr<float[]>>& bboxes,
+                            const std::vector<std::shared_ptr<float[]>>& points,
                             std::vector<cv::Mat>& lst_face_align){
     int total_face = bboxes.size();
     cv::Size face_size(112, 112);
@@ -201,8 +201,8 @@ void FaceDetectorSCRFD::get_face_align(const cv::Mat& rgb_image,
 
 void FaceDetectorSCRFD::detect(const std::vector<cv::Mat>& lst_rgb_image,
                             const float& threshold,
-                            std::vector<std::vector<float*>>& lst_bboxes,
-                            std::vector<std::vector<float*>>& lst_points){
+                            std::vector<std::vector<std::shared_ptr<float[]>>>& lst_bboxes,
+                            std::vector<std::vector<std::shared_ptr<float[]>>>& lst_points){
     // Get number of batch
     int total_image = lst_rgb_image.size();
     int total_minibatch = total_image % max_batch_size_ == 0 ? (int)(total_image / max_batch_size_) : (int)(total_image / max_batch_size_) + 1;
@@ -238,15 +238,15 @@ void FaceDetectorSCRFD::detect(const std::vector<cv::Mat>& lst_rgb_image,
         // Post Process
         for (int j = 0; j < batch_size; j++){
             // Foreach image
-            std::vector<float*> bboxes {};
-            std::vector<float*> points {};
+            std::vector<std::shared_ptr<float[]>> bboxes {};
+            std::vector<std::shared_ptr<float[]>> points {};
             
             int nbox = tmp_num_detections[j];
 
             for (int k = 0; k < nbox; ++k){
                 if (tmp_nmsed_scores[j*keep_top_k_ + k] > threshold){
-                    float* box = new float[4];
-                    float* point = new float[10];
+                    std::shared_ptr<float[]> box (new float[4]);
+                    std::shared_ptr<float[]> point (new float[10]);
                     for (int ii = 0; ii < 4; ii++){
                         box[ii] = tmp_nmsed_boxes[(j*keep_top_k_ + k)*4 + ii] / tmp_scales[j];
                     }
