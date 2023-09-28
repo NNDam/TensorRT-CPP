@@ -49,7 +49,7 @@ private:
     int input_height_   = 640;
     int keep_top_k_     = 200;
     int index_input_    = 200;
-    std::string classes_name = "../data/coco.names";
+    std::string classes_name = "data/coco.names";
 
     int index_input           = -1;
     int index_num_detections  = -1;

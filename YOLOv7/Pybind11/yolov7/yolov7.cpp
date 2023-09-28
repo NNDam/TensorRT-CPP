@@ -49,7 +49,7 @@ YOLOV7::~YOLOV7()
 void YOLOV7::init()
 {
     // Load classes name
-    std::cout << "Prepare classes name " << std::endl;
+    std::cout << "Prepare classes name data/coco.names" << std::endl;
     std::ifstream fdict;
     setlocale(LC_CTYPE, "");
     if(!GOT_CLASSES_NAME) {
@@ -79,7 +79,7 @@ void YOLOV7::init()
     mRuntime = std::shared_ptr<nvinfer1::IRuntime>(nvinfer1::createInferRuntime(gLogger));
     assert(mRuntime != nullptr);
 
-    std::cout << "Deserialize Engine" << std::endl;
+    std::cout << "Deserialize Engine weights/yolov7x-nms-fp32.trt" << std::endl;
     deserializeEngine();
     mContext = std::shared_ptr<nvinfer1::IExecutionContext>(mCudaEngine->createExecutionContext());
     assert(mContext != nullptr);
@@ -116,7 +116,7 @@ void YOLOV7::init()
 }
 
 void YOLOV7::deserializeEngine(){
-    std::ifstream file("../weights/model.engine", std::ios::binary);
+    std::ifstream file("weights/yolov7x-nms-fp32.trt", std::ios::binary);
     if (file.good())
     {
         file.seekg(0, file.end);

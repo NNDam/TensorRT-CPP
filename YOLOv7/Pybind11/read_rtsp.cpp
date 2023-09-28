@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <memory>
 #include <opencv2/opencv.hpp>
-#include "yolov7.h"
+#include "yolov7/yolov7.h"
 
 int main(int argc, char** argv){
 
@@ -25,6 +25,7 @@ int main(int argc, char** argv){
     }
 
     float threshold = 0.65;
+    int count_frame = 0;
     while (1){
         cv::Mat frame;
         cv::Mat frame_bgr;
@@ -47,7 +48,7 @@ int main(int argc, char** argv){
         object_detector.detect(lst_rgb_image, threshold, lst_objects);
         auto end = std::chrono::system_clock::now();
         float FPS = 1000.0 / (float) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        std::cout << "Detected " << lst_objects[0].size() << " object(s) | FPS: " << FPS << std::endl;
+        std::cout << "Frame " << std::to_string(count_frame) << " Detected " << lst_objects[0].size() << " object(s) | FPS: " << FPS << std::endl;
 
         object_detector.visualize_all(frame_bgr, lst_objects[0]);
         cv::resize(frame_bgr, frame_bgr, cv::Size(640, 480));
@@ -55,7 +56,7 @@ int main(int argc, char** argv){
 
         lst_objects.clear();
         lst_rgb_image.clear();
-
+        count_frame += 1;
     };
     cap.release();
     writer.release();
