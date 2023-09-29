@@ -3,9 +3,21 @@ cmake_minimum_required(VERSION 3.4)
 project(object_detection)
 
 set(CMAKE_CXX_STANDARD 11)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread -I/usr/include/python3.8 -lpython3.8")
+
+find_package(Python COMPONENTS Interpreter Development)
+message("-- Python_FOUND:${Python_FOUND}")
+message("-- Python_VERSION:${Python_VERSION}")
+message("-- Python_Development_FOUND:${Python_Development_FOUND}")
+message("-- Python_LIBRARIES:${Python_LIBRARIES}")
+
+
 find_package(CUDA REQUIRED)
+include_directories(/usr/local/cuda/include)
+link_directories(/usr/local/cuda/lib64)
+
 find_package(Threads REQUIRED)
+
 find_package(OpenMP)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -13,26 +25,21 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 find_package( OpenCV REQUIRED )
-message("OpenCV_FOUND='${OpenCV_FOUND}'")
+message("-- OpenCV_FOUND='${OpenCV_FOUND}'")
 include_directories( ${OpenCV_INCLUDE_DIRS} )
+find_package(pybind11 REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}/yolov7)
-include_directories(/usr/local/cuda/include)
-link_directories(/usr/local/cuda/lib64)
 
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Ofast -Wfatal-errors -D_MWAITXINTRIN_H_INCLUDED")
+# pybind11 method:
+pybind11_add_module(object_detection main.cpp yolov7/utils.cpp yolov7/yolov7.cpp)
 
 
-
-file(GLOB SOURCES
-    ${PROJECT_SOURCE_DIR}/yolov7/*.cpp
-    ${PROJECT_SOURCE_DIR}/read_rtsp.cpp
-)
-
-add_executable(object_detector ${SOURCES})
-target_link_libraries(object_detector nvinfer)
-target_link_libraries(object_detector nvinfer_plugin)
-target_link_libraries(object_detector cudart)
-target_link_libraries(object_detector ${OpenCV_LIBS})
-target_link_libraries(object_detector ${CMAKE_THREAD_LIBS_INIT})
+# Link libraries
+target_link_libraries(${PROJECT_NAME} PRIVATE nvinfer)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${pybind11_LIBRARY})
+target_link_libraries(${PROJECT_NAME} PRIVATE nvinfer_plugin)
+target_link_libraries(${PROJECT_NAME} PRIVATE cudart)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_THREAD_LIBS_INIT})

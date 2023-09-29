@@ -36,6 +36,7 @@ public:
                             std::vector<std::vector<ObjectInfo>>& lst_objects);
     void visualize_all(cv::Mat& visualize_image,
                     std::vector<ObjectInfo>& lst_objects);
+    int read_rtsp(std::string input_video_path, std::string output_video_path);
 
 private:
     Logger gLogger;
