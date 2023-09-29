@@ -1,4 +1,4 @@
-# Python & C++ wrapper for End-to-End YOLOv7
+# Python & Pybind11 C++ wrapper for End-to-End YOLOv7
 - Original repo: https://github.com/WongKinYiu/yolov7
 - NMS Plugin: https://github.com/NVIDIA/TensorRT/tree/main/plugin/batchedNMSPlugin
 ## 1. Tested Performance
@@ -49,12 +49,18 @@ Change path to serialized engine file and run
   <i> Output of <b>YOLOv7X-1x3x640x640 thresh 0.5</b>. For better result, just resize input larger</i>
 </p>
 
-## 3. TensorRT C++
-### Sample Application for Video/RTSP input
-Put sample ```yolov7x-nms-fp16.trt``` from above Python conversion and rename to ```C++/weights/model.engine```
+## 3. Pybind11 TensorRT C++
+### Sample Pybind11 Application for Video/RTSP input
+#### Requirements
+- Python3.8 (for other version please edit ```CMakeLists.txt``` manually)
+- pybind11: ```pip install pybind11[global]```
+- opencv, openmp
+
+Put converted tensorrt model to ```weights/yolov7-nms-fp32.trt```
 ```
-  cd C++
+  cd Pybind11
   mkdir build && cd build
-  make
-  ./object_detector test.mp4
+  cmake .. && make
+  cd ..
+  python test_pybind11.py
 ```
